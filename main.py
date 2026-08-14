@@ -15,13 +15,15 @@ if not api_key:
 client = genai.Client(api_key=api_key)
 
 #Send a request to Gemini 
-question = input("You: ")
-interaction = client.interactions.create(
-    model="gemini-3.5-flash-lite",
-    input=question,
-)
+while True:
+    question = input("You: ")
+    if question.lower()=="exit":
+        break
 
-#Print the response
-print(interaction.output_text)
+    interaction = client.interactions.create(
+        model="gemini-3.5-flash-lite",
+        input=question,
+    )
+    print(interaction.output_text)
 
 
