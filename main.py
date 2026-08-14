@@ -15,9 +15,10 @@ if not api_key:
 client = genai.Client(api_key=api_key)
 
 #Send a request to Gemini 
+question = input("You: ")
 interaction = client.interactions.create(
     model="gemini-3.5-flash-lite",
-    input="Explain what an AI agent is in simple terms.",
+    input=question,
 )
 
 #Print the response
