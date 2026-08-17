@@ -24,6 +24,19 @@ class StudyNote(BaseModel):
 class StudyNotes(BaseModel):
     notes: list[StudyNote]
 
+class Question(BaseModel):
+    question: str
+    answer: str
+    difficulty: Literal["easy","medium","hard"]
+
+class QuestionList(BaseModel):
+    questions: list[Question]
+
+class Evaluation(BaseModel):
+        result: Literal["correct", "partially_correct", "incorrect"]
+        feedback: str
+        correct_answer: str
+
 
 load_dotenv()
 
@@ -90,6 +103,43 @@ Return only the requested structured data.
 """
 
 
+question_instruction = """
+You are an AI exam question generator.
+
+Generate useful exam questions from the provided study notes.
+
+Focus on the important concepts and create questions that test the student's understanding.
+
+For each question:
+- provide the question
+- provide the correct answer
+- classify the difficulty as easy, medium, or hard
+
+Make the questions suitable for Computer Science exam preparation.
+
+Return only the requested structured data.
+"""
+
+
+evaluation_instruction = """
+You are an AI answer evaluator.
+
+Evaluate the student's answer against the provided question and correct answer.
+
+Classify the student's answer as:
+- correct: the answer is accurate and sufficiently complete.
+- partially_correct: the answer contains some correct information but misses important parts.
+- incorrect: the answer is wrong or does not demonstrate understanding.
+
+Provide clear and concise feedback explaining why the answer received that classification.
+
+Also provide the correct answer.
+
+Return only the requested structured data.
+"""
+
+
+
 # First Gemini interaction: identify important topics
 interaction = client.interactions.create(
     model="gemini-3.5-flash-lite",
@@ -136,6 +186,49 @@ notes_interaction = client.interactions.create(
 
 # Convert Gemini output into a StudyNotes object
 notes = StudyNotes.model_validate_json(notes_interaction.output_text)
+
+
+question_interaction = client.interactions.create(
+    model="gemini-3.5-flash-lite",
+    system_instruction=question_instruction,
+    input=notes_interaction.output_text,
+    response_format={
+        "type": "text",
+        "mime_type": "application/json",
+        "schema": QuestionList.model_json_schema(),
+    },
+)
+
+questions = QuestionList.model_validate_json(question_interaction.output_text)
+
+for question in questions.questions:
+    print(question.question)
+
+    student_answer = input("Your answer: ")
+
+    evaluation_interaction = client.interactions.create(
+        model="gemini-3.5-flash-lite",
+        system_instruction=evaluation_instruction,
+        input=(
+            "Question: " + question.question +
+            "\nStudent Answer: " + student_answer +
+            "\nCorrect Answer: " + question.answer
+        ),
+        response_format={
+            "type": "text",
+            "mime_type": "application/json",
+            "schema": Evaluation.model_json_schema(),
+        },
+    )
+
+    evaluation = Evaluation.model_validate_json(
+        evaluation_interaction.output_text
+    )
+
+    print("Result:", evaluation.result)
+    print("Feedback:", evaluation.feedback)
+    print("Correct Answer:", evaluation.correct_answer)
+    print()
 
 
 # Display the study notes
