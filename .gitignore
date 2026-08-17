@@ -1,4 +1,5 @@
 .env
 .venv/
+sample.pdf
 __pycache__/
 *.pycwhic
